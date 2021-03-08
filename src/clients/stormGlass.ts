@@ -1,3 +1,5 @@
+import { ClientInternalError } from "@src/util/errors/ClientRequestError";
+import { StormGlassResponseError } from "@src/util/errors/StormGlassResponseError";
 import { AxiosStatic } from "axios";
 
 export interface StormGlassPointSource {
@@ -38,7 +40,7 @@ export class StormGlass {
     constructor(protected request: AxiosStatic){}
 
     public async fetchPoints(lat: number, lng: number): Promise<{}> {
-
+      try {
         const response = await this.request.get<StormGlassForecastResponse>(
             `https://api.stormglass.io/v2/weather/point?lat=${lat}&lng=${lng}&params=${this.stormGlassAPIParams}&source=${this.stormGlassAPISource}`,
             {
@@ -48,6 +50,12 @@ export class StormGlass {
             }
           );
           return this.normalizeResponse(response.data);
+      } catch (err) {
+        if(err.response && err.response.status) {          
+          throw new StormGlassResponseError(`Error: ${JSON.stringify(err.response.data)} Code: ${err.response.status}`)
+        }
+        throw new ClientInternalError(err.message)
+      }
     }
 
     private normalizeResponse(
