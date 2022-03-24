@@ -50,16 +50,16 @@ export class StormGlass {
         }
       );
       return this.normalizeResponse(response.data);
-    } catch (err: unknown) {
-      if ((err as AxiosError).response && (err as AxiosError).response?.data) {
+    } catch (err) {
+      const axiosError = err as AxiosError;
+      if (axiosError.response && axiosError.response.status) {
         throw new StormGlassResponseError(
-          `Error: ${JSON.stringify((err as AxiosError).response?.data)} Code: ${
-            (err as AxiosError).response?.status
+          `Error: ${JSON.stringify(axiosError.response.data)} Code: ${
+            axiosError.response.status
           }`
         );
       }
-
-      throw new ClientRequestError((err as Error).message);
+      throw new ClientRequestError(axiosError.message);
     }
   }
 
