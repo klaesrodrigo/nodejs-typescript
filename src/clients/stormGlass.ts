@@ -1,8 +1,8 @@
 import { ClientRequestError } from '@src/util/errors/ClientRequestError';
 import { StormGlassResponseError } from '@src/util/errors/StormGlassResponseError';
-import { AxiosError, AxiosStatic } from 'axios';
-import config, { IConfig } from 'config'
-
+import config, { IConfig } from 'config';
+import * as HTTPUtil from '@src/util/request';
+import { AxiosError } from 'axios';
 export interface StormGlassPointSource {
   [key: string]: number;
 }
@@ -33,19 +33,25 @@ export interface ForecastPoint {
   windSpeed: number;
 }
 
-const stormGlassResourceConfig: IConfig = config.get('App.resources.StormGlass')
+const stormGlassResourceConfig: IConfig = config.get(
+  'App.resources.StormGlass'
+);
 
 export class StormGlass {
   readonly stormGlassAPIParams =
     'swellDirection,swellHeight,swellPeriod,waveDirection,waveHeight,windDirection,windSpeed';
   readonly stormGlassAPISource = 'noaa';
 
-  constructor(protected request: AxiosStatic) {}
+  constructor(protected request = new HTTPUtil.Request()) {}
 
   public async fetchPoints(lat: number, lng: number): Promise<ForecastPoint[]> {
     try {
       const response = await this.request.get<StormGlassForecastResponse>(
-        `${stormGlassResourceConfig.get('apiUrl')}/weather/point?lat=${lat}&lng=${lng}&params=${this.stormGlassAPIParams}&source=${this.stormGlassAPISource}`,
+        `${stormGlassResourceConfig.get(
+          'apiUrl'
+        )}/weather/point?lat=${lat}&lng=${lng}&params=${
+          this.stormGlassAPIParams
+        }&source=${this.stormGlassAPISource}`,
         {
           headers: {
             Authorization: stormGlassResourceConfig.get('apiToken'),
@@ -55,7 +61,7 @@ export class StormGlass {
       return this.normalizeResponse(response.data);
     } catch (err) {
       const axiosError = err as AxiosError;
-      if (axiosError.response && axiosError.response.status) {
+      if (HTTPUtil.Request.isRequestError(axiosError)) {
         throw new StormGlassResponseError(
           `Error: ${JSON.stringify(axiosError.response.data)} Code: ${
             axiosError.response.status
